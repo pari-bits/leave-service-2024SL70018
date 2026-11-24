@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     stages {
         stage('Checkout') {
             steps { checkout scm }
@@ -17,9 +16,7 @@ pipeline {
             }
         }
         stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t leave-service-2024sl70018:${BUILD_NUMBER} .'
-            }
+            steps { sh 'docker build -t leave-service-2024sl70018:${BUILD_NUMBER} .' }
         }
         stage('Deploy to Staging') {
             steps {
@@ -27,8 +24,20 @@ pipeline {
                     docker stop leave-service-staging || true
                     docker rm leave-service-staging || true
                     docker run -d --name leave-service-staging -e APP_ENV=staging -p 8085:8080 leave-service-2024sl70018:${BUILD_NUMBER}
-                    sleep 3
-                    docker logs leave-service-staging
+                    sleep 3 && docker logs leave-service-staging
+                '''
+            }
+        }
+        stage('Approve Production Deployment') {
+            steps { input message: 'Deploy to Production?', ok: 'Approve' }
+        }
+        stage('Deploy to Production') {
+            steps {
+                sh '''
+                    docker stop leave-service-prod || true
+                    docker rm leave-service-prod || true
+                    docker run -d --name leave-service-prod -e APP_ENV=production -p 8086:8080 leave-service-2024sl70018:${BUILD_NUMBER}
+                    sleep 3 && docker logs leave-service-prod
                 '''
             }
         }
